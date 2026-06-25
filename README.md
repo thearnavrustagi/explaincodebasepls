@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# explaincodebasepls
 
-## Getting Started
+Turn any GitHub repository into navigable technical documentation in minutes.
 
-First, run the development server:
+**Architecture diagrams · HLD · LLD · API flows · Glossary**
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+https://github.com/thearnavrustagi/explaincodebasepls
+
+---
+
+## What it does
+
+Paste a GitHub repo URL. The app clones the repo, runs it through a two-pass LLM pipeline, and produces:
+
+| Output | Description |
+|---|---|
+| Architecture diagram | Interactive Mermaid system topology |
+| Subsystem diagrams | Two deeper Mermaid diagrams (frontend/backend or data-flow/dependency) |
+| HLD | High-Level Design: components, data flow, integrations, design decisions |
+| LLD | Low-Level Design: typed schemas, service interfaces, DB models, error handling |
+| API Flows | Mermaid sequence diagrams for 3–6 major user journeys |
+| Glossary | Domain terms, acronyms, and patterns in context |
+
+Results stream progressively to the browser as each agent completes.
+
+---
+
+## Pipeline
+
+```
+GitHub URL
+  → git clone --depth 1
+  → File tree walk + README read
+  → Pass 1: Enriched explanation (claude-opus-4-8, streaming)
+  → Pass 2: 6 parallel agents (claude-sonnet-4-6)
+      diagram-arch · diagram-sub · hld · lld · api-flows · glossary
+  → Results stream via SSE → persist to SQLite
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The explanation pass is intentionally richer than the original GitDiagram pipeline — it asks the model to identify subsystem ownership, sync/async data flows, the full API surface with request/response shapes, data model relationships, frontend/backend boundary, auth model, external dependencies, and architectural patterns.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+All 6 agents run in parallel via `Promise.allSettled` — a single agent failure skips that section without failing the job.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## Tech stack
 
-To learn more about Next.js, take a look at the following resources:
+- **Next.js 15** App Router, TypeScript
+- **Portkey** — LLM gateway with per-agent metadata slugs
+- **Drizzle ORM + better-sqlite3** — job and section persistence
+- **simple-git** — shallow clone with local PAT for private repos
+- **Mermaid.js** (CDN) — architecture + sequence diagram rendering
+- **Shiki** — syntax highlighting for LLD code blocks
+- **react-markdown + remark-gfm** — HLD and glossary rendering
+- **SSE** — live streaming progress from pipeline to browser
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Architecture: Ports & Adapters (Hexagonal). Core pipeline has zero framework dependencies.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## Setup
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+git clone https://github.com/thearnavrustagi/explaincodebasepls
+cd explaincodebasepls
+npm install
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Copy env template and fill in your keys
+cp .env.local.example .env.local
+
+# Generate and run DB migration
+npm run db:generate
+npm run db:migrate
+
+# Start dev server
+npm run dev
+```
+
+### Environment variables
+
+```bash
+PORTKEY_API_KEY=        # Your Portkey API key
+PORTKEY_VIRTUAL_KEY=    # Portkey virtual key pointing to Anthropic
+DATABASE_URL=./data/jobs.db
+CLONE_DIR=/tmp/ecb-jobs
+```
+
+For private repos: ensure your system git has credentials configured (macOS Keychain, `gh auth setup-git`, or a `.netrc` entry).
+
+### Portkey configuration
+
+The app routes all LLM calls through Portkey using your `PORTKEY_VIRTUAL_KEY`. Each agent sends an `x-portkey-metadata` header with `{ "agent": "ecb-<name>" }` for per-agent observability in the Portkey dashboard.
+
+No saved configs needed — just the virtual key pointing to your Anthropic API key.
+
+---
+
+## URL formats supported
+
+```
+owner/repo
+github.com/owner/repo
+https://github.com/owner/repo
+https://github.com/owner/repo.git
+git@github.com:owner/repo.git
+```
+
+---
+
+## Design
+
+Design system: **The Dark Cartographer** — pitch black (`oklch 3.5%`) + amber-orange accent (`oklch 72% 0.22 55`). Space Grotesk for display, Geist Mono for everything else. One accent signal, used sparingly.
+
+See `DESIGN.md` and `PRODUCT.md` for full design context.

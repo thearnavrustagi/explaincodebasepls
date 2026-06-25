@@ -1,6 +1,4 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
+# ─── Dependencies ─────────────────────────────────────────────────────────────
 /node_modules
 /.pnp
 .pnp.*
@@ -10,32 +8,70 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
-
-# next.js
+# ─── Next.js ──────────────────────────────────────────────────────────────────
 /.next/
 /out/
-
-# production
 /build
 
-# misc
-.DS_Store
-*.pem
+# ─── Environment variables — never commit secrets ─────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+# .env.local.example is intentionally NOT ignored (safe template)
 
-# debug
+# ─── Database — SQLite file lives here ────────────────────────────────────────
+/data/
+*.db
+*.sqlite
+*.sqlite3
+
+# ─── Pipeline temp clones ─────────────────────────────────────────────────────
+/tmp/
+
+# ─── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+*.pem
+Thumbs.db
+
+# ─── Editor ───────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ─── Debug / logs ─────────────────────────────────────────────────────────────
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
-# env files (can opt-in for committing if needed)
-.env*
+# ─── Test & coverage ──────────────────────────────────────────────────────────
+/coverage
+.nyc_output/
 
-# vercel
-.vercel
+# ─── Playwright browser automation artifacts ──────────────────────────────────
+/.playwright-mcp/
+/test-results/
+/playwright-report/
 
-# typescript
+# ─── Generated screenshots (dev artefacts) ───────────────────────────────────
+*.png
+*.jpeg
+!public/**/*.png
+!public/**/*.jpg
+!public/**/*.jpeg
+
+# ─── TypeScript ───────────────────────────────────────────────────────────────
 *.tsbuildinfo
 next-env.d.ts
+
+# ─── Deploy ───────────────────────────────────────────────────────────────────
+.vercel
+.turbo

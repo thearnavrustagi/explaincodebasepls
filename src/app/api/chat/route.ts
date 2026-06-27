@@ -1,25 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import OpenAI from 'openai'
+import Portkey from 'portkey-ai'
 import { z } from 'zod'
 import { SQLiteJobStore } from '@/adapters/storage/sqlite'
 
-const OPENAI_MODELS = [
-  'gpt-4o',
-  'gpt-4o-mini',
-  'gpt-4-turbo',
-  'o1',
-  'o1-mini',
-  'o3-mini',
-] as const
+// Portkey slug for the chat agent
+const CHAT_SLUG = 'ecb-chat'
 
 const bodySchema = z.object({
-  jobId:       z.string().min(1),
-  model:       z.string().default('gpt-4o'),
-  messages:    z.array(z.object({
+  jobId:        z.string().min(1),
+  model:        z.string().default('gpt-4o'),
+  messages:     z.array(z.object({
     role:    z.enum(['user', 'assistant', 'system']),
     content: z.string(),
   })),
-  pinnedContext: z.string().optional(), // user-pinned paragraph
+  pinnedContext: z.string().optional(),
 })
 
 /** Build the system prompt from the job's documentation sections */
@@ -43,18 +37,18 @@ async function buildSystemPrompt(jobId: string, pinnedContext?: string): Promise
     parts.push(``)
 
     const sectionLabels: Record<string, string> = {
-      explanation:  'Architecture Explanation',
-      hld:          'High-Level Design (HLD)',
-      lld:          'Low-Level Design (LLD)',
-      api_flows:    'API Flows',
-      glossary:     'Glossary',
+      explanation: 'Architecture Explanation',
+      hld:         'High-Level Design (HLD)',
+      lld:         'Low-Level Design (LLD)',
+      api_flows:   'API Flows',
+      glossary:    'Glossary',
     }
 
     for (const [key, label] of Object.entries(sectionLabels)) {
       const section = result.sections.find(s => s.section === key)
       if (section?.content) {
         parts.push(`### ${label}`)
-        parts.push(section.content.slice(0, 6000)) // cap per section to stay within context
+        parts.push(section.content.slice(0, 6000))
         parts.push(``)
       }
     }
@@ -72,10 +66,24 @@ async function buildSystemPrompt(jobId: string, pinnedContext?: string): Promise
   return parts.join('\n')
 }
 
+/** Singleton Portkey client for chat */
+let _client: Portkey | null = null
+function getClient(): Portkey {
+  if (!_client) {
+    _client = new Portkey({
+      apiKey:     process.env.PORTKEY_API_KEY!,
+      virtualKey: process.env.PORTKEY_VIRTUAL_KEY!,
+    })
+  }
+  return _client
+}
+
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) {
-    return NextResponse.json({ error: 'OPENAI_API_KEY not configured' }, { status: 500 })
+  if (!process.env.PORTKEY_API_KEY || !process.env.PORTKEY_VIRTUAL_KEY) {
+    return NextResponse.json(
+      { error: 'PORTKEY_API_KEY and PORTKEY_VIRTUAL_KEY must be set' },
+      { status: 500 }
+    )
   }
 
   let body: unknown
@@ -89,28 +97,38 @@ export async function POST(req: NextRequest) {
   }
 
   const { jobId, model, messages, pinnedContext } = parsed.data
-
   const systemPrompt = await buildSystemPrompt(jobId, pinnedContext)
+  const client = getClient()
 
-  const client = new OpenAI({ apiKey })
+  let stream: any
+  try {
+    stream = await client.chat.completions.create(
+      {
+        model,
+        stream:     true,
+        max_tokens: 2048,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...messages,
+        ],
+      } as any,
+      {
+        headers: {
+          'x-portkey-metadata': JSON.stringify({ agent: CHAT_SLUG }),
+        },
+      }
+    )
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Failed to connect to LLM'
+    return NextResponse.json({ error: msg }, { status: 502 })
+  }
 
-  const stream = await client.chat.completions.create({
-    model,
-    stream: true,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      ...messages,
-    ],
-    max_tokens: 2048,
-  })
-
-  // Stream the response as SSE
   const encoder = new TextEncoder()
   const readable = new ReadableStream({
     async start(controller) {
       try {
-        for await (const chunk of stream) {
-          const delta = chunk.choices[0]?.delta?.content
+        for await (const chunk of (stream as any)) {
+          const delta = chunk?.choices?.[0]?.delta?.content
           if (delta) {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ delta })}\n\n`))
           }

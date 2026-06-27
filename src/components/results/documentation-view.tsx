@@ -8,6 +8,8 @@ import { MarkdownView } from './markdown-view'
 import { PinnableMarkdown } from './pinnable-markdown'
 import { SkeletonLoader } from './skeleton-loader'
 import { ChatPanel } from './chat-panel'
+import { parseGlossaryTerms } from './glossary-term'
+import type { GlossaryEntry } from './glossary-term'
 import type { SectionKey } from '@/core/types/job'
 
 interface Props {
@@ -74,10 +76,14 @@ function SectionContent({
   sectionKey,
   content,
   onPin,
+  glossaryTerms,
+  onGlossaryClick,
 }: {
-  sectionKey: SectionKey
-  content:    string
-  onPin:      (text: string) => void
+  sectionKey:       SectionKey
+  content:          string
+  onPin:            (text: string) => void
+  glossaryTerms?:   GlossaryEntry[]
+  onGlossaryClick?: () => void
 }) {
   switch (sectionKey) {
     case 'diagram_arch':
@@ -91,7 +97,14 @@ function SectionContent({
     case 'hld':
     case 'glossary':
     default:
-      return <PinnableMarkdown content={content} onPin={onPin} />
+      return (
+        <PinnableMarkdown
+          content={content}
+          onPin={onPin}
+          glossaryTerms={sectionKey === 'glossary' ? undefined : glossaryTerms}
+          onGlossaryClick={sectionKey === 'glossary' ? undefined : onGlossaryClick}
+        />
+      )
   }
 }
 
@@ -114,6 +127,11 @@ export function DocumentationView({
   const [error, setError]         = useState<string | null>(null)
   const sectionRefs               = useRef<Record<string, HTMLElement | null>>({})
   const scrollContainerRef        = useRef<HTMLDivElement>(null)
+
+  // Parse glossary terms whenever the glossary section content changes
+  const glossaryTerms: GlossaryEntry[] = sections.glossary
+    ? parseGlossaryTerms(sections.glossary)
+    : []
 
   // Connect SSE if job is not yet complete
   useEffect(() => {
@@ -164,6 +182,11 @@ export function DocumentationView({
     container.scrollBy({ top: elTop - contTop - offset, behavior: 'smooth' })
   }, [])
 
+  // Navigate to glossary section
+  const scrollToGlossary = useCallback(() => {
+    scrollTo('glossary')
+  }, [scrollTo])
+
   // Update active key on scroll — find whichever section top is at or just above the viewport
   useEffect(() => {
     const container = scrollContainerRef.current
@@ -198,7 +221,7 @@ export function DocumentationView({
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'oklch(3.5% 0.005 55)' }}>
-      <SectionNav items={navItems} owner={owner} repo={repo} onSelect={scrollTo} />
+      <SectionNav items={navItems} owner={owner} repo={repo} jobId={jobId} onSelect={scrollTo} />
 
 
       <div ref={scrollContainerRef} style={{ flex: 1, minWidth: 0, overflowY: 'auto', height: '100vh' }}>
@@ -322,6 +345,8 @@ export function DocumentationView({
                   sectionKey={key}
                   content={sections[key]!}
                   onPin={setPinnedContext}
+                  glossaryTerms={glossaryTerms.length > 0 ? glossaryTerms : undefined}
+                  onGlossaryClick={scrollToGlossary}
                 />
               ) : (
                 <SkeletonLoader />

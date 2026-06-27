@@ -1,18 +1,24 @@
 'use client'
 import { useState, useRef } from 'react'
 import { MarkdownView } from './markdown-view'
+import type { GlossaryEntry } from './glossary-term'
 
 interface Props {
-  content:   string
-  onPin:     (text: string) => void
+  content:          string
+  onPin:            (text: string) => void
+  glossaryTerms?:   GlossaryEntry[]
+  onGlossaryClick?: () => void
 }
 
 /**
  * Wraps MarkdownView with a selection-to-pin affordance.
  * When the user selects text and releases the mouse, a small ✦ button
  * appears near the selection. Clicking it pins that text as chat context.
+ *
+ * Also forwards glossaryTerms + onGlossaryClick into MarkdownView so that
+ * any section (HLD, LLD, API Flows, etc.) can show inline term tooltips.
  */
-export function PinnableMarkdown({ content, onPin }: Props) {
+export function PinnableMarkdown({ content, onPin, glossaryTerms, onGlossaryClick }: Props) {
   const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -55,7 +61,11 @@ export function PinnableMarkdown({ content, onPin }: Props) {
       style={{ position: 'relative' }}
       onMouseUp={handleMouseUp}
     >
-      <MarkdownView content={content} />
+      <MarkdownView
+        content={content}
+        glossaryTerms={glossaryTerms}
+        onGlossaryClick={onGlossaryClick}
+      />
 
       {tooltip && (
         <button

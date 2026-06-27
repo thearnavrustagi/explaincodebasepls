@@ -1,5 +1,7 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import type { GlossaryEntry } from './glossary-term'
+import { injectGlossaryIntoChildren, useGlossaryTermMap } from './glossary-term'
 
 // Shared token values — amber-warm black palette
 const T = {
@@ -13,9 +15,25 @@ const T = {
   codeText:'oklch(80% 0.012 55)',   // inline code text
 }
 
-interface Props { content: string }
+interface Props {
+  content:         string
+  glossaryTerms?:  GlossaryEntry[]
+  onGlossaryClick?: () => void
+}
 
-export function MarkdownView({ content }: Props) {
+export function MarkdownView({ content, glossaryTerms, onGlossaryClick }: Props) {
+  const termMap = useGlossaryTermMap(glossaryTerms)
+
+  // Injects glossary term tooltips into inline text nodes.
+  // wrap() is only called for elements that contain readable prose — headings,
+  // paragraphs, list items, blockquotes, table cells.  Code blocks are left
+  // untouched (skipped inside injectGlossaryIntoChildren as well, as defence
+  // in depth).
+  function wrap(children: React.ReactNode) {
+    if (!termMap.size || !onGlossaryClick) return children
+    return injectGlossaryIntoChildren(children, termMap, onGlossaryClick)
+  }
+
   return (
     <div style={{ maxWidth: '72ch' }}>
       <ReactMarkdown
@@ -34,7 +52,7 @@ export function MarkdownView({ content }: Props) {
                 lineHeight:    1.1,
               }}
             >
-              {children}
+              {wrap(children)}
             </h1>
           ),
           h2: ({ children }) => (
@@ -52,7 +70,7 @@ export function MarkdownView({ content }: Props) {
                 lineHeight:    1.2,
               }}
             >
-              {children}
+              {wrap(children)}
             </h2>
           ),
           h3: ({ children }) => (
@@ -67,7 +85,7 @@ export function MarkdownView({ content }: Props) {
                 lineHeight:  1.3,
               }}
             >
-              {children}
+              {wrap(children)}
             </h3>
           ),
           h4: ({ children }) => (
@@ -83,7 +101,7 @@ export function MarkdownView({ content }: Props) {
                 letterSpacing: '0.06em',
               }}
             >
-              {children}
+              {wrap(children)}
             </h4>
           ),
           p: ({ children }) => (
@@ -96,7 +114,7 @@ export function MarkdownView({ content }: Props) {
                 marginBottom:'14px',
               }}
             >
-              {children}
+              {wrap(children)}
             </p>
           ),
           ul: ({ children }) => (
@@ -131,14 +149,14 @@ export function MarkdownView({ content }: Props) {
               }}
             >
               <span style={{ color: T.accent, flexShrink: 0, marginTop: '2px', fontSize: '0.7rem' }}>▸</span>
-              <span>{children}</span>
+              <span>{wrap(children)}</span>
             </li>
           ),
           strong: ({ children }) => (
-            <strong style={{ color: T.t0, fontWeight: 600 }}>{children}</strong>
+            <strong style={{ color: T.t0, fontWeight: 600 }}>{wrap(children)}</strong>
           ),
           em: ({ children }) => (
-            <em style={{ color: T.t2, fontStyle: 'italic' }}>{children}</em>
+            <em style={{ color: T.t2, fontStyle: 'italic' }}>{wrap(children)}</em>
           ),
           code({ className, children }) {
             const isBlock = className?.includes('language-')
@@ -164,6 +182,7 @@ export function MarkdownView({ content }: Props) {
               )
             }
 
+            // Inline code — no glossary injection: identifiers aren't prose
             return (
               <code
                 style={{
@@ -207,7 +226,7 @@ export function MarkdownView({ content }: Props) {
                 background:   T.surface,
               }}
             >
-              {children}
+              {wrap(children)}
             </th>
           ),
           td: ({ children }) => (
@@ -218,7 +237,7 @@ export function MarkdownView({ content }: Props) {
                 borderBottom: `1px solid oklch(12% 0.005 55)`,
               }}
             >
-              {children}
+              {wrap(children)}
             </td>
           ),
           hr: () => (
@@ -236,7 +255,7 @@ export function MarkdownView({ content }: Props) {
                 color:      T.t2,
               }}
             >
-              {children}
+              {wrap(children)}
             </blockquote>
           ),
         }}

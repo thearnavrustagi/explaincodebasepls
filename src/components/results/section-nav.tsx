@@ -1,4 +1,5 @@
 'use client'
+import { ExportButton } from './export-button'
 
 export interface NavItem {
   key:    string
@@ -11,6 +12,7 @@ interface Props {
   items:    NavItem[]
   owner:    string
   repo:     string
+  jobId:    string
   onSelect: (key: string) => void
 }
 
@@ -23,7 +25,7 @@ const T2      = 'oklch(62% 0.006 55)'
 const T3      = 'oklch(38% 0.004 55)'
 const T4      = 'oklch(22% 0.003 55)'
 
-export function SectionNav({ items, owner, repo, onSelect }: Props) {
+export function SectionNav({ items, owner, repo, jobId, onSelect }: Props) {
   return (
     <nav
       style={{
@@ -148,11 +150,16 @@ export function SectionNav({ items, owner, repo, onSelect }: Props) {
       {/* Footer */}
       <div
         style={{
-          padding:   '14px 20px',
-          borderTop: `1px solid ${BORDER}`,
-          flexShrink: 0,
+          padding:       '14px 20px',
+          borderTop:     `1px solid ${BORDER}`,
+          flexShrink:    0,
+          display:       'flex',
+          flexDirection: 'column',
+          gap:           '10px',
         }}
       >
+        <ExportButton jobId={jobId} />
+
         <a
           href="/"
           style={{

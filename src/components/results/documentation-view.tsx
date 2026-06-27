@@ -5,7 +5,9 @@ import { MermaidDiagram } from './mermaid-diagram'
 import { AsciiFlow } from './ascii-flow'
 import { LldView } from './lld-view'
 import { MarkdownView } from './markdown-view'
+import { PinnableMarkdown } from './pinnable-markdown'
 import { SkeletonLoader } from './skeleton-loader'
+import { ChatPanel } from './chat-panel'
 import type { SectionKey } from '@/core/types/job'
 
 interface Props {
@@ -59,7 +61,15 @@ function DiagramSubSection({ content }: { content: string }) {
   )
 }
 
-function SectionContent({ sectionKey, content }: { sectionKey: SectionKey; content: string }) {
+function SectionContent({
+  sectionKey,
+  content,
+  onPin,
+}: {
+  sectionKey: SectionKey
+  content:    string
+  onPin:      (text: string) => void
+}) {
   switch (sectionKey) {
     case 'diagram_arch':
       return <MermaidDiagram definition={content} id="arch" />
@@ -72,7 +82,7 @@ function SectionContent({ sectionKey, content }: { sectionKey: SectionKey; conte
     case 'hld':
     case 'glossary':
     default:
-      return <MarkdownView content={content} />
+      return <PinnableMarkdown content={content} onPin={onPin} />
   }
 }
 
@@ -83,8 +93,9 @@ export function DocumentationView({
   initialSections,
   initialStatus,
 }: Props) {
-  const [sections, setSections]   = useState<Partial<Record<SectionKey, string>>>(initialSections ?? {})
-  const [activeKey, setActiveKey] = useState<SectionKey>('diagram_arch')
+  const [sections,      setSections]      = useState<Partial<Record<SectionKey, string>>>(initialSections ?? {})
+  const [activeKey,     setActiveKey]     = useState<SectionKey>('diagram_arch')
+  const [pinnedContext, setPinnedContext] = useState<string | null>(null)
   const [phase, setPhase]         = useState<string>(
     initialStatus === 'complete' ? 'Complete' : initialStatus ?? 'Connecting…'
   )
@@ -179,6 +190,7 @@ export function DocumentationView({
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: 'oklch(3.5% 0.005 55)' }}>
       <SectionNav items={navItems} owner={owner} repo={repo} onSelect={scrollTo} />
+
 
       <div ref={scrollContainerRef} style={{ flex: 1, minWidth: 0, overflowY: 'auto', height: '100vh' }}>
         {/* Accent top stripe — matches landing page */}
@@ -297,7 +309,11 @@ export function DocumentationView({
               <div style={{ height: '1px', background: 'oklch(17% 0.005 55)', margin: '12px 0 28px' }} />
 
               {sections[key] ? (
-                <SectionContent sectionKey={key} content={sections[key]!} />
+                <SectionContent
+                  sectionKey={key}
+                  content={sections[key]!}
+                  onPin={setPinnedContext}
+                />
               ) : (
                 <SkeletonLoader />
               )}
@@ -305,6 +321,13 @@ export function DocumentationView({
           ))}
         </div>
       </div>
+
+      {/* Chat panel — right column */}
+      <ChatPanel
+        jobId={jobId}
+        pinnedContext={pinnedContext}
+        onClearPin={() => setPinnedContext(null)}
+      />
     </div>
   )
 }

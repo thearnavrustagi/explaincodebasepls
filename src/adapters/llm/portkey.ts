@@ -29,7 +29,7 @@ export class PortkeyLLMClient implements ILLMClient {
       headers: { 'x-portkey-metadata': JSON.stringify({ agent: params.slug }) },
     })
 
-    for await (const chunk of streamResponse) {
+    for await (const chunk of (streamResponse as any)) {
       const delta = (chunk as any).choices?.[0]?.delta?.content
       if (delta) yield { content: delta }
     }

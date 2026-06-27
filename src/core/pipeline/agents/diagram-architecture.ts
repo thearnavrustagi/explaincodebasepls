@@ -1,29 +1,45 @@
 import type { ILLMClient } from '@/adapters/llm/port'
 import type { AgentOutput } from '@/core/types/pipeline'
 
-const SLUG  = 'ecb-diagram-arch'
-const MODEL = 'claude-sonnet-4-6'
+const SLUG      = 'ecb-diagram-arch'
+const MODEL     = 'claude-sonnet-4-6'
 const MAX_TOKENS = 3_000
 
-const SYSTEM = `You are an expert software architect creating a high-level architecture diagram.
+const SYSTEM = `You are an expert software architect producing a clean, readable Mermaid architecture diagram.
 
 You will receive:
 - <explanation>: a detailed architectural analysis of the codebase
 - <file_tree>: the filtered file paths
 - <repo_owner> and <repo_name>
 
-Produce a single Mermaid diagram showing the high-level system architecture.
+## Diagram requirements
 
-Rules:
-- Use graph LR (left-right) for most systems, graph TD (top-down) for pipeline-style or layered architectures
-- 8–20 nodes maximum. More is worse.
-- Use subgraph for logical groupings (e.g., Frontend, Backend, Infrastructure, External)
-- Node labels: 1–4 words, human-readable
-- Include the most important data flow edges with short labels
-- Show external dependencies (databases, external APIs, auth providers) as distinct nodes
-- Do NOT include: click handlers, style directives, classDef, linkStyle, or any Mermaid directives
-- Do NOT wrap in backticks or code fences — output raw Mermaid syntax only
-- Do NOT add any prose before or after the diagram
+Produce a SINGLE Mermaid diagram. The goal is a crisp, high-signal overview a human can read in 30 seconds.
+
+### Layout strategy (choose one, commit to it)
+- Use \`graph TD\` (top-down) for systems with clear layers: user-facing → application → data. This is the DEFAULT.
+- Use \`graph LR\` ONLY for pure pipeline/workflow systems where left-to-right data flow is the dominant story.
+- Never mix subgraph orientations. Pick one and use it consistently.
+
+### Structure rules
+- **6–14 nodes maximum**. Fewer is better. Collapse implementation details into single representative nodes.
+- **Subgraphs**: Use 2–4 subgraphs for major boundaries (e.g. "Client", "Backend", "Infrastructure", "External"). Every node must belong to a subgraph.
+- **Layer discipline**: In a TD diagram, all nodes in a subgraph should be at roughly the same depth. Do NOT put a bottom-layer node (DB) inside a top-layer subgraph (Frontend).
+- **Edge direction**: Edges should generally flow downward (TD) or rightward (LR). Avoid backwards edges — they cause Mermaid to produce crossing, overlapping layouts.
+- **Max edges**: 8–16 edges. Only show the architecturally significant flows. Omit obvious/trivial connections.
+- **Edge labels**: 1–4 words. Verb-first ("calls", "stores", "reads", "triggers"). No sentences.
+
+### Node rules
+- Node labels: 1–4 words, human-readable, no file paths
+- Use rectangle nodes \`NodeID[Label]\` by default
+- Use \`NodeID[(Label)]\` for databases/stores only
+- Use \`NodeID([Label])\` for external services/cloud only
+
+### Hard bans
+- No click handlers, no style directives, no classDef, no linkStyle
+- No node IDs longer than 15 characters (causes layout issues)
+- No backtick fences — output raw Mermaid syntax only
+- No prose before or after the diagram
 
 Output the raw Mermaid syntax only. Nothing else.`
 
@@ -40,11 +56,11 @@ export async function runDiagramArchAgent(
 ): Promise<AgentOutput> {
   const start = Date.now()
   const content = await llm.complete({
-    slug:        SLUG,
-    model:       MODEL,
+    slug:         SLUG,
+    model:        MODEL,
     systemPrompt: SYSTEM,
-    userPrompt:  buildPrompt(explanation, fileTree, owner, repo),
-    maxTokens:   MAX_TOKENS,
+    userPrompt:   buildPrompt(explanation, fileTree, owner, repo),
+    maxTokens:    MAX_TOKENS,
   })
   return { section: 'diagram_arch', content: content.trim(), durationMs: Date.now() - start }
 }

@@ -5,6 +5,7 @@ import type { IJobStore } from '@/adapters/storage/port'
 import type { IRepoFetcher } from '@/adapters/git/port'
 import { ingestRepo } from './ingest'
 import { runExplainPass } from './explain'
+import { postprocess } from './postprocess'
 import { runDiagramArchAgent }  from './agents/diagram-architecture'
 import { runDiagramSubAgent }   from './agents/diagram-subsystem'
 import { runHldAgent }          from './agents/hld'
@@ -65,7 +66,8 @@ export async function runPipeline(
     // Phase 3: Explanation pass
     emit(jobId, { type: 'phase', phase: 'explaining' })
     console.log(`[${jobId}] Running explanation pass...`)
-    const explanation = await runExplainPass(llm, fileTree, readme)
+    const rawExplanation = await runExplainPass(llm, fileTree, readme)
+    const explanation = postprocess(rawExplanation)
     await store.upsertSection({ jobId, section: 'explanation', content: explanation })
     emit(jobId, { type: 'section', section: 'explanation', content: explanation })
     console.log(`[${jobId}] Explanation complete (${explanation.length} chars)`)
@@ -91,7 +93,8 @@ export async function runPipeline(
 
     for (const result of results) {
       if (result.status === 'fulfilled') {
-        const { section, content, durationMs } = result.value
+        const { section, durationMs } = result.value
+        const content = postprocess(result.value.content)
         console.log(`[${jobId}] Agent ${section} done in ${durationMs}ms`)
         await store.upsertSection({ jobId, section, content })
         emit(jobId, { type: 'section', section, content })

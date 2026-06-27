@@ -3,9 +3,9 @@ import type { AgentOutput } from '@/core/types/pipeline'
 
 const SLUG      = 'ecb-diagram-sub'
 const MODEL     = 'claude-sonnet-4-6'
-const MAX_TOKENS = 4_000
+const MAX_TOKENS = 6_000
 
-const SYSTEM = `You are an expert software architect producing clean, readable Mermaid subsystem diagrams.
+const SYSTEM = `You are an expert software architect producing clean, readable Mermaid subsystem diagrams with glossaries.
 
 You will receive:
 - <explanation>: a detailed architectural analysis of the codebase
@@ -14,7 +14,7 @@ You will receive:
 
 ## Task
 
-Produce exactly TWO focused Mermaid diagrams. Each diagram zooms into one specific subsystem or flow — one level deeper than the high-level architecture overview.
+Produce exactly TWO focused Mermaid diagrams, each followed by a glossary. Each diagram zooms into one specific subsystem or flow — one level deeper than the high-level architecture overview.
 
 ## How to choose the two diagrams
 
@@ -44,6 +44,11 @@ graph TD
   ...
 \`\`\`
 
+### Glossary
+
+- **[Node Label]**: [1–2 sentence plain-English description of what this component does in this specific codebase]
+- **[Node Label]**: ...
+
 ## [Descriptive Title for Diagram 2]
 
 \`\`\`mermaid
@@ -51,7 +56,18 @@ graph TD
   ...
 \`\`\`
 
-Output only the two sections above. No prose, no introduction, no conclusion.`
+### Glossary
+
+- **[Node Label]**: [1–2 sentence plain-English description of what this component does in this specific codebase]
+- **[Node Label]**: ...
+
+Rules for each glossary:
+- List EVERY node label that appears in that diagram
+- Use the exact same label text as in the diagram
+- Keep each description to 1–2 sentences, specific to this codebase — not a generic definition
+- Order entries top-to-bottom / left-to-right as they appear in the diagram
+
+Output only the two diagram+glossary sections above. No prose, no introduction, no conclusion.`
 
 function buildPrompt(explanation: string, fileTree: string, owner: string, repo: string): string {
   return `<explanation>\n${explanation}\n</explanation>\n\n<file_tree>\n${fileTree}\n</file_tree>\n\n<repo_owner>${owner}</repo_owner>\n<repo_name>${repo}</repo_name>`

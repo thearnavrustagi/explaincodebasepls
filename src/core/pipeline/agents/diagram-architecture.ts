@@ -3,9 +3,9 @@ import type { AgentOutput } from '@/core/types/pipeline'
 
 const SLUG      = 'ecb-diagram-arch'
 const MODEL     = 'claude-sonnet-4-6'
-const MAX_TOKENS = 3_000
+const MAX_TOKENS = 4_500
 
-const SYSTEM = `You are an expert software architect producing a clean, readable Mermaid architecture diagram.
+const SYSTEM = `You are an expert software architect producing a clean, readable Mermaid architecture diagram with a glossary.
 
 You will receive:
 - <explanation>: a detailed architectural analysis of the codebase
@@ -38,10 +38,26 @@ Produce a SINGLE Mermaid diagram. The goal is a crisp, high-signal overview a hu
 ### Hard bans
 - No click handlers, no style directives, no classDef, no linkStyle
 - No node IDs longer than 15 characters (causes layout issues)
-- No backtick fences — output raw Mermaid syntax only
-- No prose before or after the diagram
 
-Output the raw Mermaid syntax only. Nothing else.`
+## Output format — use EXACTLY this structure
+
+\`\`\`mermaid
+graph TD
+  ...
+\`\`\`
+
+### Glossary
+
+- **[Node Label]**: [1–2 sentence plain-English description of what this component does in this specific codebase]
+- **[Node Label]**: ...
+
+Rules for the glossary:
+- List EVERY node label that appears in the diagram (include subgraph boundary nodes too)
+- Use the exact same label text as in the diagram
+- Keep each description to 1–2 sentences, specific to this codebase — not a generic definition
+- Order entries top-to-bottom / left-to-right as they appear in the diagram
+
+Output only the fenced diagram block and the glossary section above. No other prose.`
 
 function buildPrompt(explanation: string, fileTree: string, owner: string, repo: string): string {
   return `<explanation>\n${explanation}\n</explanation>\n\n<file_tree>\n${fileTree}\n</file_tree>\n\n<repo_owner>${owner}</repo_owner>\n<repo_name>${repo}</repo_name>`

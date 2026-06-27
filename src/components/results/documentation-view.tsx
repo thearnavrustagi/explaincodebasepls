@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { SectionNav } from './section-nav'
-import { MermaidDiagram } from './mermaid-diagram'
+import { DiagramBlock } from './diagram-block'
 import { AsciiFlow } from './ascii-flow'
 import { LldView } from './lld-view'
 import { MarkdownView } from './markdown-view'
@@ -35,28 +35,37 @@ const PHASE_LABELS: Record<string, string> = {
 }
 
 function DiagramSubSection({ content }: { content: string }) {
-  const blocks = [...content.matchAll(/```mermaid\n([\s\S]*?)```/g)]
-  const titles = [...content.matchAll(/^## (.+)$/gm)]
+  // Split into per-diagram chunks on `## ` headings.
+  // Each chunk contains the heading, the mermaid fence, and (if present) the glossary.
+  const chunks = content.split(/(?=^## )/m).filter(c => c.trim())
 
-  if (blocks.length === 0) {
-    return <MermaidDiagram definition={content} id="sub-0" />
+  if (chunks.length === 0) {
+    // No headings — treat entire content as a single diagram block (bare mermaid or fenced)
+    return <DiagramBlock content={content} id="sub-0" />
   }
 
   return (
     <div className="space-y-10">
-      {blocks.map((block, i) => (
-        <div key={i}>
-          {titles[i] && (
-            <h3
-              className="mb-4 text-sm font-semibold"
-              style={{ fontFamily: 'var(--font-display)', color: 'oklch(72% 0.22 55)' }}
-            >
-              {titles[i][1]}
-            </h3>
-          )}
-          <MermaidDiagram definition={block[1].trim()} id={`sub-${i}`} />
-        </div>
-      ))}
+      {chunks.map((chunk, i) => {
+        // Extract the ## heading from the chunk (first line starting with ## )
+        const titleMatch = chunk.match(/^## (.+)$/m)
+        // The body is everything after the heading line
+        const body = chunk.replace(/^## .+\n?/, '').trim()
+
+        return (
+          <div key={i}>
+            {titleMatch && (
+              <h3
+                className="mb-4 text-sm font-semibold"
+                style={{ fontFamily: 'var(--font-display)', color: 'oklch(72% 0.22 55)' }}
+              >
+                {titleMatch[1]}
+              </h3>
+            )}
+            <DiagramBlock content={body} id={`sub-${i}`} />
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -72,7 +81,7 @@ function SectionContent({
 }) {
   switch (sectionKey) {
     case 'diagram_arch':
-      return <MermaidDiagram definition={content} id="arch" />
+      return <DiagramBlock content={content} id="arch" />
     case 'diagram_sub':
       return <DiagramSubSection content={content} />
     case 'lld':

@@ -3,7 +3,7 @@ import type { AgentOutput } from '@/core/types/pipeline'
 
 const SLUG  = 'ecb-hld'
 const MODEL = 'claude-sonnet-4-6'
-const MAX_TOKENS = 8_000
+const MAX_TOKENS = 128_000
 
 const SYSTEM = `You are a senior software architect writing a High-Level Design (HLD) document for a software system.
 
@@ -21,6 +21,8 @@ One paragraph: what this system does, who uses it, and what success looks like.
 
 ## 2. Key Components & Responsibilities
 A subsection for each major component. What it owns, what it does, what it does NOT do. Include the relevant file paths.
+
+For each component, after the Owns/Does/Does Not sections, add a "📖 Deep Dive" subsection (H4) that explains the component as if the reader has never seen this codebase before. Format it as a blockquote (lines prefixed with >) so it's visually distinct from the main content. Cover: why this component exists (the problem it solves), how it fits into the bigger picture, what would break if you removed it, any non-obvious implementation details a newcomer would trip over, and a plain-English walkthrough of its core logic. Be generous with context — assume the reader is a competent engineer but a total stranger to this repo.
 
 ## 3. Data Flow Architecture
 How data moves through the system end-to-end. Distinguish synchronous vs asynchronous paths. Use numbered steps for clarity.

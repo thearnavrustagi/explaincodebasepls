@@ -17,12 +17,17 @@ const C = {
 }
 
 const MODELS = [
-  { id: 'gpt-4o',       label: 'GPT-4o'       },
-  { id: 'gpt-4o-mini',  label: 'GPT-4o Mini'  },
-  { id: 'gpt-4-turbo',  label: 'GPT-4 Turbo'  },
-  { id: 'o1',           label: 'o1'            },
-  { id: 'o1-mini',      label: 'o1 Mini'       },
-  { id: 'o3-mini',      label: 'o3 Mini'       },
+  // Frontier — GPT-5.x family
+  { id: 'gpt-5.5-pro',  label: 'GPT-5.5 Pro ✦' },  // best for deep technical docs
+  { id: 'gpt-5.5',      label: 'GPT-5.5'        },
+  { id: 'gpt-5.4-pro',  label: 'GPT-5.4 Pro'    },
+  { id: 'gpt-5.4',      label: 'GPT-5.4'        },
+  { id: 'gpt-5.4-mini', label: 'GPT-5.4 mini'   },
+  { id: 'gpt-5.4-nano', label: 'GPT-5.4 nano'   },
+  // Legacy
+  { id: 'gpt-4o',       label: 'GPT-4o'         },
+  { id: 'gpt-4o-mini',  label: 'GPT-4o mini'    },
+  { id: 'o3-mini',      label: 'o3 mini'         },
 ]
 
 interface Message {
@@ -39,7 +44,7 @@ interface Props {
 export function ChatPanel({ jobId, pinnedContext, onClearPin }: Props) {
   const [messages,   setMessages]   = useState<Message[]>([])
   const [input,      setInput]      = useState('')
-  const [model,      setModel]      = useState('gpt-4o')
+  const [model,      setModel]      = useState('gpt-5.5-pro')
   const [streaming,  setStreaming]  = useState(false)
   const [error,      setError]      = useState<string | null>(null)
   const [open,       setOpen]       = useState(true)

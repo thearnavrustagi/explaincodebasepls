@@ -6,9 +6,12 @@ import { SQLiteJobStore } from '@/adapters/storage/sqlite'
 // Portkey slug for the chat agent
 const CHAT_SLUG = 'ecb-chat'
 
+// Default: GPT-5.5 Pro — best for deep technical document comprehension
+const DEFAULT_CHAT_MODEL = 'gpt-5.5-pro'
+
 const bodySchema = z.object({
   jobId:        z.string().min(1),
-  model:        z.string().default('gpt-4o'),
+  model:        z.string().default(DEFAULT_CHAT_MODEL),
   messages:     z.array(z.object({
     role:    z.enum(['user', 'assistant', 'system']),
     content: z.string(),
